@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Minecraft Server RAM Calculator - MC Tools</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="js/loadNavbar.js" defer></script>
+  <link rel="icon" type="image/png" href="/assets/favicon-96x96.png" sizes="96x96" />
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+  <link rel="shortcut icon" href="/assets/favicon.ico" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-title" content="MC Tools" />
+  <link rel="manifest" href="/assets/site.webmanifest" />
+</head>
+<body>
+  <div id="navbar"></div>
+
+  <header>
+    <h1>WIP - Minecraft Server RAM Calculator</h1>
+    <p>Estimate the recommended RAM for your Minecraft server based on version, players, mods, plugins, and server type.</p>
+  </header>
+
+  <main>
+    <form id="ramCalcForm">
+      <label for="mcVersion">Minecraft Version:</label>
+      <select id="mcVersion" required>
+        <option value="1.21">1.21</option>
+        <option value="1.20">1.20</option>
+        <option value="1.19">1.19</option>
+        <option value="1.18">1.18</option>
+        <option value="1.17">1.17</option>
+        <option value="1.16">1.16</option>
+        <option value="1.12">1.12</option>
+        <option value="1.11">1.11</option>
+        <option value="1.10">1.10</option>
+        <option value="1.9">1.9</option>
+        <option value="1.8">1.8</option>
+        <option value="1.7">1.7</option>        
+      </select>
+
+      <label for="serverType">Server Type:</label>
+      <select id="serverType" required>
+        <option value="vanilla">Vanilla</option>
+        <option value="spigot">Spigot (plugin-based)</option>
+        <option value="paper">Paper (plugin-based)</option>
+        <option value="forge">Forge (modded)</option>
+        <option value="neoforge">NeoForge (modded)</option>
+        <option value="fabric">Fabric (modded)</option>
+      </select>
+
+      <label for="playerCount">Number of Players:</label>
+      <input type="number" id="playerCount" min="1" max="500" value="10" required />
+
+      <div id="modCountContainer" style="display:none;">
+        <label for="modCount">Number of Mods:</label>
+        <input type="number" id="modCount" min="0" max="300" value="20" />
+      </div>
+
+      <div id="pluginCountContainer" style="display:none;">
+        <label for="pluginCount">Number of Plugins:</label>
+        <input type="number" id="pluginCount" min="0" max="200" value="15" />
+      </div>
+
+      <button type="submit">Calculate RAM</button>
+    </form>
+
+    <section id="result" aria-live="polite" style="margin-top:2em;">
+      <!-- Results will show here -->
+    </section>
+  </main>
+
+  <footer>
+    Made with <span>❤</span> for Minecraft Server Admins — <a href="https://github.com/CamoMano/MC-Tools">GitHub</a>
+  </footer>
+
+  <script>
+    // Base RAM per Minecraft version in GB
+    const baseRAMByVersion = {
+      "1.7": 1.0,
+      "1.8": 1.2,
+      "1.9": 1.5,
+      "1.10": 1.8,
+      "1.11": 2.0,
+      "1.12": 1.5,
+      "1.16": 2.0,
+      "1.17": 3.0,
+      "1.18": 3.2,
+      "1.19": 3.5,
+      "1.20": 4.0,
+      "1.21": 4.0
+    };
+
+    // RAM per player in MB by server type
+    const ramPerPlayerMB = {
+      vanilla: 75,
+      spigot: 50,
+      paper: 45,
+      forge: 90,
+      fabric: 80,
+    };
+
+    // Server optimization factors (multiplier on total RAM needed)
+    // Lower is better optimization -> less RAM needed
+    const optimizationFactor = {
+      vanilla: 1.0,
+      spigot: 0.85,
+      paper: 0.8,
+      forge: 1.3,
+      neoforge: 1.2,
+      fabric: 1.1,
+    };
+
+    // Dynamic RAM per mod in MB with diminishing returns
+    function modRAMPerMod(modCount) {
+      if (modCount === 0) return 0;
+      if (modCount <= 10) return 25;          
+      if (modCount <= 30) return 20;          
+      if (modCount <= 60) return 15;          
+      if (modCount <= 100) return 12;
+      return 8;                               
+    }
+
+    // Dynamic RAM per plugin in MB with diminishing returns (slightly lower than mods)
+    function pluginRAMPerPlugin(pluginCount) {
+      if (pluginCount === 0) return 0;
+      if (pluginCount <= 10) return 15;
+      if (pluginCount <= 30) return 10;
+      if (pluginCount <= 60) return 7;
+      return 4;
+    }
+
+    // Player RAM scaling - RAM per player slightly decreases with more players due to shared resources
+    function playerRAMScaling(playerCount, basePerPlayerMB) {
+      if (playerCount <= 1) return basePerPlayerMB;
+      const scale = Math.max(0.4, 1 - Math.log(playerCount) / 10);
+      return basePerPlayerMB * scale;
+    }
+
+    // JVM + plugin/mod overhead multiplier (15%)
+    const overheadMultiplier = 1.15;
+
+    // DOM elements
+    const serverTypeSelect = document.getElementById("serverType");
+    const modCountContainer = document.getElementById("modCountContainer");
+    const pluginCountContainer = document.getElementById("pluginCountContainer");
+    const ramCalcForm = document.getElementById("ramCalcForm");
+    const resultSection = document.getElementById("result");
+
+    // Show mod or plugin count inputs based on server type
+    serverTypeSelect.addEventListener("change", () => {
+      const type = serverTypeSelect.value;
+      if (type === "forge" || type === "fabric" || type === "neoforge") {
+        modCountContainer.style.display = "block";
+        pluginCountContainer.style.display = "none";
+      } else if (type === "spigot" || type === "paper") {
+        pluginCountContainer.style.display = "block";
+        modCountContainer.style.display = "none";
+      } else {
+        modCountContainer.style.display = "none";
+        pluginCountContainer.style.display = "none";
+      }
+    });
+
+    ramCalcForm.addEventListener("submit", e => {
+      e.preventDefault();
+      calculateRAM();
+    });
+
+    function roundToNearestHalf(num) {
+      return Math.round(num * 2) / 2;
+    }
+
+    function calculateRAM() {
+      const mcVersion = document.getElementById("mcVersion").value;
+      const serverType = document.getElementById("serverType").value;
+      const playerCount = Number(document.getElementById("playerCount").value);
+
+      let modCount = 0;
+      if (serverType === "forge" || serverType === "fabric" || serverType === "neoforge") {
+        modCount = Number(document.getElementById("modCount").value) || 0;
+      }
+
+      let pluginCount = 0;
+      if (serverType === "spigot" || serverType === "paper") {
+        pluginCount = Number(document.getElementById("pluginCount").value) || 0;
+      }
+
+      // Base RAM in GB
+      let baseRAM = baseRAMByVersion[mcVersion] || 1.5;
+
+      // Base RAM adjusted by optimization factor (better server = less RAM needed)
+      baseRAM *= optimizationFactor[serverType] || 1.0;
+
+      // Calculate RAM per player (MB) with scaling
+      let basePlayerRAM = ramPerPlayerMB[serverType] || 75;
+      let playerRAM = playerRAMScaling(playerCount, basePlayerRAM);
+
+      // Total RAM for players in GB
+      const totalPlayerRAM = (playerRAM * playerCount) / 1024;
+
+      // Calculate mod RAM if modded server
+      let modRAM = 0;
+      if (modCount > 0) {
+        const ramPerModMB = modRAMPerMod(modCount);
+        modRAM = (ramPerModMB * modCount) / 1024;
+      }
+
+      // Calculate plugin RAM if plugin-based server
+      let pluginRAM = 0;
+      if (pluginCount > 0) {
+        const ramPerPluginMB = pluginRAMPerPlugin(pluginCount);
+        pluginRAM = (ramPerPluginMB * pluginCount) / 1024;
+      }
+
+      // Sum total RAM before overhead
+      let totalRAM = baseRAM + totalPlayerRAM + modRAM + pluginRAM;
+
+      // Add JVM + plugin/mod overhead
+      totalRAM *= overheadMultiplier;
+
+      // Minimum 1 GB recommended
+      totalRAM = Math.max(totalRAM, 1.0);
+
+      // Round to nearest 0.5 GB
+      totalRAM = roundToNearestHalf(totalRAM);
+
+      // Build explanation with conditional mod/plugin RAM lines and no additional overhead line
+      let explanation = `
+        <p><strong>Base RAM for Minecraft ${mcVersion}:</strong> ${baseRAM.toFixed(2)} GB (adjusted for ${serverType.charAt(0).toUpperCase() + serverType.slice(1)} server optimizations)</p>
+        <p><strong>Player RAM (${playerCount} player${playerCount !== 1 ? 's' : ''}):</strong> ${totalPlayerRAM.toFixed(2)} GB (~${playerRAM.toFixed(1)} MB per player after scaling for shared resources)</p>
+      `;
+
+      if (modCount > 0 && (serverType === "forge" || serverType === "fabric" || serverType === "neoforge")) {
+        explanation += `<p><strong>Mod RAM (${modCount} mod${modCount !== 1 ? 's' : ''}):</strong> ${modRAM.toFixed(2)} GB (~${modRAMPerMod(modCount).toFixed(1)} MB per mod with diminishing RAM usage as mod count increases)</p>`;
+      }
+
+      if (pluginCount > 0 && (serverType === "spigot" || serverType === "paper")) {
+        explanation += `<p><strong>Plugin RAM (${pluginCount} plugin${pluginCount !== 1 ? 's' : ''}):</strong> ${pluginRAM.toFixed(2)} GB (~${pluginRAMPerPlugin(pluginCount).toFixed(1)} MB per plugin with diminishing RAM usage as plugin count increases)</p>`;
+      }
+
+      explanation += `
+        <h2>Recommended RAM: <span style="color:#00d8ff;">${totalRAM} GB</span></h2>
+      `;
+
+      resultSection.innerHTML = explanation;
+      resultSection.focus();
+    }
+
+    // Initialize display on page load for mod/plugin inputs
+    (() => {
+      const event = new Event('change');
+      serverTypeSelect.dispatchEvent(event);
+    })();
+  </script>
+</body>
+</html>

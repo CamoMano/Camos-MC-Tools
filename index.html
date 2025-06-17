@@ -7,6 +7,12 @@
   <base href="./">
   <link rel="stylesheet" href="style.css" />
   <script src="js/loadNavbar.js" defer></script>
+  <link rel="icon" type="image/png" href="/assets/favicon-96x96.png" sizes="96x96" />
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+  <link rel="shortcut icon" href="/assets/favicon.ico" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-title" content="MC Tools" />
+  <link rel="manifest" href="/assets/site.webmanifest" />
 </head>
 <body>
   <div id="navbar"></div>
@@ -36,6 +42,18 @@
         <h3>Mod Scanner</h3>
         <p>Scan your modpack for client-side-only mods.</p>
         <button type="button" onclick="location.href='mod-scanner.html'">Open</button>
+      </div>
+
+      <div class="tool-card">
+        <h3>Crash Analyzer</h3>
+        <p>Analyze Minecraft crash reports to identify and fix common server issues, errors, and conflicts.</p>
+        <button type="button" onclick="location.href='crash-analyzer.html'">Open</button>
+      </div>
+
+      <div class="tool-card">
+        <h3>RAM Calculator</h3>
+        <p>Estimate the recommended RAM for your Minecraft server based on version, players, mods, plugins, and server type.</p>
+        <button type="button" onclick="location.href='ram-calculator.html'">Open</button>
       </div>
     </section>
   </main>
