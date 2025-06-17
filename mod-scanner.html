@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,6 +13,7 @@
   <meta name="apple-mobile-web-app-title" content="MC Tools" />
   <link rel="manifest" href="/assets/site.webmanifest" />
 </head>
+
 <body>
   <div id="navbar"></div>
   <script src="js/loadNavbar.js"></script>
@@ -29,7 +31,7 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script>
-    let config = {};
+    let data = {};
 
     const categoryDescriptions = {
       Known: "These mods are explicitly marked as client-sided.",
@@ -52,16 +54,16 @@
         const simplifiedName = simplifyName(mod.href);
         let categorized = false;
 
-        if (config.Known.some(keyword => simplifiedName.includes(simplifyName(keyword)))) {
+        if (data.Known.some(keyword => simplifiedName.includes(simplifyName(keyword)))) {
           categories["Known"].push(mod); categorized = true;
         }
 
-        if (!categorized && config.Not.some(keyword => simplifiedName.includes(simplifyName(keyword)))) {
+        if (!categorized && data.Not.some(keyword => simplifiedName.includes(simplifyName(keyword)))) {
           categories["Not"].push(mod); categorized = true;
         }
 
         if (!categorized) {
-          for (const [category, keywords] of Object.entries(config)) {
+          for (const [category, keywords] of Object.entries(data)) {
             if (category === "Known" || category === "Not") continue;
             if (keywords.some(keyword => simplifiedName.includes(simplifyName(keyword)))) {
               const displayCategory = category + " Probability";
@@ -117,14 +119,14 @@
       }
     };
 
-    const loadConfig = async () => {
+    const loadData = async () => {
       try {
-        const response = await fetch("config.json");
-        if (!response.ok) throw new Error(`Failed to load config: ${response.statusText}`);
-        config = await response.json();
+        const response = await fetch("data.json");
+        if (!response.ok) throw new Error(`Failed to load data: ${response.statusText}`);
+        data = await response.json();
       } catch (error) {
         console.error(error);
-        alert("Failed to load configuration file.");
+        alert("Failed to load data file.");
       }
     };
 
@@ -149,7 +151,8 @@
       if (file) processZipFile(file);
     });
 
-    window.onload = loadConfig;
+    window.onload = loadData;
   </script>
 </body>
+
 </html>

@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Server Properties Checker</title>
-  <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="style.css" />
   <link rel="icon" type="image/png" href="/assets/favicon-96x96.png" sizes="96x96" />
   <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
   <link rel="shortcut icon" href="/assets/favicon.ico" />
@@ -12,6 +13,7 @@
   <meta name="apple-mobile-web-app-title" content="MC Tools" />
   <link rel="manifest" href="/assets/site.webmanifest" />
 </head>
+
 <body>
   <div id="navbar"></div>
   <script src="js/loadNavbar.js"></script>
@@ -21,7 +23,7 @@
     <p>Paste your <code>server.properties</code> content or upload the file below.</p>
 
     <textarea id="textInput" rows="12" placeholder="Paste your server.properties content here..."></textarea><br><br>
-    <input type="file" id="fileInput" accept=".txt,.properties"/><br><br>
+    <input type="file" id="fileInput" accept=".txt,.properties" /><br><br>
     <button onclick="analyzeProperties()">Analyze</button>
     <button id="copyBtn" style="display:none;" onclick="copyOptimized()">Copy Optimized</button>
     <button id="downloadBtn" style="display:none;" onclick="downloadOptimized()">Download Optimized</button>
@@ -148,4 +150,5 @@
     }
   </script>
 </body>
+
 </html>

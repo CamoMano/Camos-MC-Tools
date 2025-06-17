@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -13,12 +14,14 @@
   <meta name="apple-mobile-web-app-title" content="MC Tools" />
   <link rel="manifest" href="/assets/site.webmanifest" />
 </head>
+
 <body>
   <div id="navbar"></div>
 
   <header>
     <h1>WIP - Minecraft Server RAM Calculator</h1>
-    <p>Estimate the recommended RAM for your Minecraft server based on version, players, mods, plugins, and server type.</p>
+    <p>Estimate the recommended RAM for your Minecraft server based on version, players, mods, plugins, and server type.
+    </p>
   </header>
 
   <main>
@@ -36,7 +39,7 @@
         <option value="1.10">1.10</option>
         <option value="1.9">1.9</option>
         <option value="1.8">1.8</option>
-        <option value="1.7">1.7</option>        
+        <option value="1.7">1.7</option>
       </select>
 
       <label for="serverType">Server Type:</label>
@@ -97,6 +100,7 @@
       spigot: 50,
       paper: 45,
       forge: 90,
+      neoforge: 85,
       fabric: 80,
     };
 
@@ -114,11 +118,11 @@
     // Dynamic RAM per mod in MB with diminishing returns
     function modRAMPerMod(modCount) {
       if (modCount === 0) return 0;
-      if (modCount <= 10) return 25;          
-      if (modCount <= 30) return 20;          
-      if (modCount <= 60) return 15;          
+      if (modCount <= 10) return 25;
+      if (modCount <= 30) return 20;
+      if (modCount <= 60) return 15;
       if (modCount <= 100) return 12;
-      return 8;                               
+      return 8;
     }
 
     // Dynamic RAM per plugin in MB with diminishing returns (slightly lower than mods)
@@ -254,4 +258,5 @@
     })();
   </script>
 </body>
+
 </html>

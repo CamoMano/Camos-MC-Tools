@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Crash Report Analyzer - MC Tools</title>
   <base href="./">
-  <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="style.css" />
 
   <!-- Prism.js for syntax highlighting -->
   <link href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
@@ -22,6 +23,7 @@
       margin-top: 10px;
       border-radius: 4px;
     }
+
     #highlightedOutput {
       background-color: #1e1e1e;
       padding: 1em;
@@ -29,12 +31,25 @@
       overflow-x: auto;
       margin-top: 20px;
     }
+
     #analyzeAnother {
       margin-top: 20px;
       display: none;
     }
+
+    #filterInput {
+      margin-top: 20px;
+      display: none;
+      width: 100%;
+      padding: 8px;
+      border-radius: 4px;
+      border: 1px solid #444;
+      background-color: #111;
+      color: #fff;
+    }
   </style>
 </head>
+
 <body>
   <div id="navbar"></div>
 
@@ -44,16 +59,19 @@
       <p class="subtitle">Paste a Minecraft crash report and get suggestions instantly.</p>
     </section>
 
+    <label for="crashInput" class="visually-hidden">Crash Report</label>
     <textarea id="crashInput" placeholder="Paste your crash report here..."></textarea>
-    <button onclick="analyzeCrash()">Analyze</button>
-    <button id="analyzeAnother" onclick="resetAnalyzer()">Analyze Another</button>
+    <button type="button" onclick="analyzeCrash()">Analyze</button>
+    <button type="button" id="analyzeAnother" onclick="resetAnalyzer()">Analyze Another</button>
+
+    <input type="text" id="filterInput" placeholder="Filter analysis..." oninput="filterAnalysis()" />
 
     <pre id="highlightedOutput" class="language-java" style="display:none;"><code id="highlightedCode"></code></pre>
 
-    <div class="crash-analysis" id="analysisOutput">
+    <section class="crash-analysis" id="analysisOutput">
       <h3>Analysis</h3>
       <p>Paste a crash above and click Analyze.</p>
-    </div>
+    </section>
   </main>
 
   <footer>
@@ -62,192 +80,197 @@
 
   <script>
     const patterns = [
-  // Existing patterns...
-  {
-    name: "OutOfMemoryError",
-    regex: /java\.lang\.OutOfMemoryError/,
-    explanation: "The server ran out of memory. Increase RAM allocation or optimize your modpack."
-  },
-  {
-    name: "Exception Ticking World",
-    regex: /Exception ticking world/,
-    explanation: "World corruption detected. Try restoring a backup or using tools like MCASelector."
-  },
-  {
-    name: "GLFW/Graphics Driver Crash",
-    regex: /(GLFWError|org\.lwjgl(?!.*SharedLibraryExtractPath))/i,
-    explanation: "Graphics-related crash — often client-side. Update GPU drivers or disable fancy rendering options."
-  },
-  {
-    name: "Mixin Apply Error",
-    regex: /Mixin apply failed/,
-    explanation: "A mod is incompatible or mismatched with your Minecraft version. Double-check your mod versions."
-  },
-  {
-    name: "Ticking Entity",
-    regex: /Ticking entity/,
-    explanation: "A mob caused the crash. Use NBT editors or region tools to remove the entity."
-  },
-  {
-    name: "Ticking Block Entity",
-    regex: /Ticking block entity/,
-    explanation: "A tile entity (e.g. chest or modded machine) is corrupted. Try removing it with MCASelector or MCEdit."
-  },
-  {
-    name: "Missing Dependency or Mod",
-    regex: /ClassNotFoundException|NoClassDefFoundError/,
-    explanation: "A required mod or library is missing. Ensure all dependencies are installed."
-  },
-  {
-    name: "File Access Error",
-    regex: /AccessDeniedException|FileNotFoundException/,
-    explanation: "The server could not read or write a file. Check permissions and disk space."
-  },
-  {
-    name: "Mod Version Mismatch",
-    regex: /NoSuchMethodError|ClassCastException|MethodNotFound/,
-    explanation: "A mod is using a method not found in the current version — likely version mismatch."
-  },
-  {
-    name: "Invalid Biome or Dimension ID",
-    regex: /Invalid Biome ID|Missing dimension/i,
-    explanation: "A world references a biome or dimension that no longer exists. This can happen after removing mods."
-  },
-  {
-    name: "Duplicate Mod ID",
-    regex: /DuplicateModIdException/,
-    explanation: "Two mods share the same ID. Remove one of the conflicting mods."
-  },
-  {
-    name: "Failed to Bind Port",
-    regex: /java\.net\.BindException/,
-    explanation: "The server can't bind to the port (usually 25565). Check if another instance is running."
-  },
-  // Added patterns:
-  {
-    name: "VerifyError or LinkageError",
-    regex: /java\.lang\.VerifyError|java\.lang\.LinkageError/,
-    explanation: "Class verification failed. Likely caused by mod conflicts or corrupted mod files."
-  },
-  {
-    name: "NullPointerException",
-    regex: /java\.lang\.NullPointerException/,
-    explanation: "The game tried to access an object that wasn't initialized. Could be caused by bugs or mod incompatibilities."
-  },
-  {
-    name: "StackOverflowError",
-    regex: /java\.lang\.StackOverflowError/,
-    explanation: "Infinite recursion or deeply nested method calls caused a stack overflow."
-  },
-  {
-    name: "Server Stopped Unexpectedly",
-    regex: /Stopping server|Server shutdown/,
-    explanation: "The server stopped unexpectedly, possibly due to a crash or critical error."
-  },
-  {
-    name: "Crash on Server Start",
-    regex: /Exception in server tick loop/,
-    explanation: "A critical error occurred during the server tick. Check logs for root cause; often mod issues or corrupted data."
-  },
-  {
-    name: "Forge or Fabric Mod Loader Error",
-    regex: /net\.minecraftforge\.fml\.LoadingFailedException|net\.fabricmc\.loader\.api/i,
-    explanation: "Mod Loader error detected. Check mod loader and mod versions compatibility."
-  },
-  {
-    name: "Server Watchdog Timeout",
-    regex: /ServerHangWatchdog|Watchdog detected that a single tick took/,
-    explanation: "The server froze or hung for too long. Often caused by infinite loops or heavy operations."
-  },
-  {
-    name: "Missing Registry Entry",
-    regex: /RegistryObjectNotFoundException|Unknown registry entry/,
-    explanation: "A mod references a registry entry that doesn't exist. Likely a removed or missing mod resource."
-  },
-  {
-    name: "Packet Handling Error",
-    regex: /io\.netty\.handler\.codec\.DecoderException|MalformedPacketException/,
-    explanation: "Network packet corruption or incompatibility. Often a client-server mod mismatch."
-  },
-  {
-    name: "Texture or Resource Load Error",
-    regex: /TextureAtlasSprite|ResourceLocationException|Missing texture/,
-    explanation: "Missing or corrupted resource files. Try reinstalling mods or resource packs."
-  },
-  {
-    name: "Fatal Error: JVM Crash",
-    regex: /EXCEPTION_ACCESS_VIOLATION|SIGSEGV|Fatal Error/,
-    explanation: "Low-level JVM crash. Could be caused by native library issues or incompatible Java version."
-  },
-  {
-    name: "Plugin or Server Mod Crash",
-    regex: /org\.bukkit\.plugin\.java\.JavaPluginLoader|SpongePowered/,
-    explanation: "A plugin or server-side mod caused the crash. Check plugin versions and server logs."
-  },
-
-  // More advanced / rare patterns:
-  {
-    name: "NoSuchFieldError",
-    regex: /java\.lang\.NoSuchFieldError/,
-    explanation: "A mod tried to access a field that doesn't exist. Likely a version mismatch."
-  },
-  {
-    name: "IndexOutOfBoundsException",
-    regex: /java\.lang\.IndexOutOfBoundsException/,
-    explanation: "Code tried to access an invalid index in a list or array. Possibly corrupted data or bad mod code."
-  },
-  {
-    name: "ConcurrentModificationException",
-    regex: /java\.util\.ConcurrentModificationException/,
-    explanation: "A collection was modified while iterating over it. Usually a mod bug."
-  },
-  {
-    name: "IllegalArgumentException",
-    regex: /java\.lang\.IllegalArgumentException/,
-    explanation: "An argument passed to a method was invalid. Can be mod or server configuration related."
-  },
-  {
-    name: "Minecraft Server Crashed on Plugin Load",
-    regex: /Exception in thread "Server thread" java\.lang\.NoClassDefFoundError: org\/bukkit\/plugin/,
-    explanation: "A Bukkit/Spigot plugin failed to load due to missing classes or incompatibility."
-  },
-  {
-    name: "Missing Config or Data File",
-    regex: /java\.io\.FileNotFoundException|Could not load configuration/,
-    explanation: "A mod or plugin failed to load its config or data file. Check mod/plugin installation and config files."
-  },
-  {
-    name: "Command Registration Error",
-    regex: /CommandException|Could not register command/,
-    explanation: "A mod or plugin failed to register a command. Possible mod/plugin version mismatch."
-  },
-  {
-    name: "Java Version Incompatibility",
-    regex: /UnsupportedClassVersionError|java\.lang\.NoSuchMethodError/,
-    explanation: "Mods or server software compiled for a different Java version than currently used."
-  },
-  {
-    name: "Native Library Load Failure",
-    regex: /java\.lang\.UnsatisfiedLinkError|Failed to load native library/,
-    explanation: "Native libraries (e.g., LWJGL, OpenAL) failed to load. Check your Java and OS setup."
-  },
-  {
-    name: "IllegalStateException",
-    regex: /java\.lang\.IllegalStateException/,
-    explanation: "Mod or server is in an invalid state, possibly due to configuration or mod conflicts."
-  },
-  {
-    name: "NoSuchMethodError",
-    regex: /java\.lang\.NoSuchMethodError/,
-    explanation: "A mod is trying to call a method that does not exist in the current environment — often a version mismatch."
-  },
-  {
-    name: "GameProfile Error",
-    regex: /com\.mojang\.authlib\.GameProfile/,
-    explanation: "Issues with player authentication or profile data. Could be client-server mismatch or offline mode conflicts."
-  }
-];
-
+      {
+        name: "OutOfMemoryError",
+        regex: /java\.lang\.OutOfMemoryError/,
+        explanation: "The server ran out of memory. Increase RAM allocation or optimize your modpack."
+      },
+      {
+        name: "Exception Ticking World",
+        regex: /Exception ticking world/,
+        explanation: "World corruption detected. Try restoring a backup or using tools like MCASelector."
+      },
+      {
+        name: "GLFW/Graphics Driver Crash",
+        regex: /(GLFWError|org\.lwjgl(?!.*SharedLibraryExtractPath))/i,
+        explanation: "Graphics-related crash — often client-side. Update GPU drivers or disable fancy rendering options."
+      },
+      {
+        name: "Mixin Apply Error",
+        regex: /Mixin apply failed/,
+        explanation: "A mod is incompatible or mismatched with your Minecraft version. Double-check your mod versions."
+      },
+      {
+        name: "Ticking Entity",
+        regex: /Ticking entity/,
+        explanation: "A mob caused the crash. Use NBT editors or region tools to remove the entity."
+      },
+      {
+        name: "Ticking Block Entity",
+        regex: /Ticking block entity/,
+        explanation: "A tile entity (e.g. chest or modded machine) is corrupted. Try removing it with MCASelector or MCEdit."
+      },
+      {
+        name: "Missing Dependency or Mod",
+        regex: /ClassNotFoundException|NoClassDefFoundError/,
+        explanation: "A required mod or library is missing. Ensure all dependencies are installed."
+      },
+      {
+        name: "File Access Error",
+        regex: /AccessDeniedException|FileNotFoundException/,
+        explanation: "The server could not read or write a file. Check permissions and disk space."
+      },
+      {
+        name: "Mod Version Mismatch",
+        regex: /NoSuchMethodError|ClassCastException|MethodNotFound/,
+        explanation: "A mod is using a method not found in the current version — likely version mismatch."
+      },
+      {
+        name: "Invalid Biome or Dimension ID",
+        regex: /Invalid Biome ID|Missing dimension/i,
+        explanation: "A world references a biome or dimension that no longer exists. This can happen after removing mods."
+      },
+      {
+        name: "Duplicate Mod ID",
+        regex: /DuplicateModIdException/,
+        explanation: "Two mods share the same ID. Remove one of the conflicting mods."
+      },
+      {
+        name: "Failed to Bind Port",
+        regex: /java\.net\.BindException/,
+        explanation: "The server can't bind to the port (usually 25565). Check if another instance is running."
+      },
+      {
+        name: "VerifyError or LinkageError",
+        regex: /java\.lang\.VerifyError|java\.lang\.LinkageError/,
+        explanation: "Class verification failed. Likely caused by mod conflicts or corrupted mod files."
+      },
+      {
+        name: "NullPointerException",
+        regex: /java\.lang\.NullPointerException/,
+        explanation: "The game tried to access an object that wasn't initialized. Could be caused by bugs or mod incompatibilities."
+      },
+      {
+        name: "StackOverflowError",
+        regex: /java\.lang\.StackOverflowError/,
+        explanation: "Infinite recursion or deeply nested method calls caused a stack overflow."
+      },
+      {
+        name: "Server Stopped Unexpectedly",
+        regex: /Stopping server|Server shutdown/,
+        explanation: "The server stopped unexpectedly, possibly due to a crash or critical error."
+      },
+      {
+        name: "Crash on Server Start",
+        regex: /Exception in server tick loop/,
+        explanation: "A critical error occurred during the server tick. Check logs for root cause; often mod issues or corrupted data."
+      },
+      {
+        name: "Forge or Fabric Mod Loader Error",
+        regex: /net\.minecraftforge\.fml\.LoadingFailedException|net\.fabricmc\.loader\.api/i,
+        explanation: "Mod Loader error detected. Check mod loader and mod versions compatibility."
+      },
+      {
+        name: "Server Watchdog Timeout",
+        regex: /ServerHangWatchdog|Watchdog detected that a single tick took/,
+        explanation: "The server froze or hung for too long. Often caused by infinite loops or heavy operations."
+      },
+      {
+        name: "Missing Registry Entry",
+        regex: /RegistryObjectNotFoundException|Unknown registry entry/,
+        explanation: "A mod references a registry entry that doesn't exist. Likely a removed or missing mod resource."
+      },
+      {
+        name: "Packet Handling Error",
+        regex: /io\.netty\.handler\.codec\.DecoderException|MalformedPacketException/,
+        explanation: "Network packet corruption or incompatibility. Often a client-server mod mismatch."
+      },
+      {
+        name: "Texture or Resource Load Error",
+        regex: /TextureAtlasSprite|ResourceLocationException|Missing texture/,
+        explanation: "Missing or corrupted resource files. Try reinstalling mods or resource packs."
+      },
+      {
+        name: "Fatal Error: JVM Crash",
+        regex: /EXCEPTION_ACCESS_VIOLATION|SIGSEGV|Fatal Error/,
+        explanation: "Low-level JVM crash. Could be caused by native library issues or incompatible Java version."
+      },
+      {
+        name: "Plugin or Server Mod Crash",
+        regex: /org\.bukkit\.plugin\.java\.JavaPluginLoader|SpongePowered/,
+        explanation: "A plugin or server-side mod caused the crash. Check plugin versions and server logs."
+      },
+      {
+        name: "NoSuchFieldError",
+        regex: /java\.lang\.NoSuchFieldError/,
+        explanation: "A mod tried to access a field that doesn't exist. Likely a version mismatch."
+      },
+      {
+        name: "IndexOutOfBoundsException",
+        regex: /java\.lang\.IndexOutOfBoundsException/,
+        explanation: "Code tried to access an invalid index in a list or array. Possibly corrupted data or bad mod code."
+      },
+      {
+        name: "ConcurrentModificationException",
+        regex: /java\.util\.ConcurrentModificationException/,
+        explanation: "A collection was modified while iterating over it. Usually a mod bug."
+      },
+      {
+        name: "IllegalArgumentException",
+        regex: /java\.lang\.IllegalArgumentException/,
+        explanation: "An argument passed to a method was invalid. Can be mod or server configuration related."
+      },
+      {
+        name: "Minecraft Server Crashed on Plugin Load",
+        regex: /Exception in thread "Server thread" java\.lang\.NoClassDefFoundError: org\/bukkit\/plugin/,
+        explanation: "A Bukkit/Spigot plugin failed to load due to missing classes or incompatibility."
+      },
+      {
+        name: "Missing Config or Data File",
+        regex: /java\.io\.FileNotFoundException|Could not load configuration/,
+        explanation: "A mod or plugin failed to load its config or data file. Check mod/plugin installation and config files."
+      },
+      {
+        name: "Command Registration Error",
+        regex: /CommandException|Could not register command/,
+        explanation: "A mod or plugin failed to register a command. Possible mod/plugin version mismatch."
+      },
+      {
+        name: "Java Version Incompatibility",
+        regex: /UnsupportedClassVersionError|java\.lang\.NoSuchMethodError/,
+        explanation: "Mods or server software compiled for a different Java version than currently used."
+      },
+      {
+        name: "Native Library Load Failure",
+        regex: /java\.lang\.UnsatisfiedLinkError|Failed to load native library/,
+        explanation: "Native libraries (e.g., LWJGL, OpenAL) failed to load. Check your Java and OS setup."
+      },
+      {
+        name: "IllegalStateException",
+        regex: /java\.lang\.IllegalStateException/,
+        explanation: "Mod or server is in an invalid state, possibly due to configuration or mod conflicts."
+      },
+      {
+        name: "GameProfile Error",
+        regex: /com\.mojang\.authlib\.GameProfile/,
+        explanation: "Issues with player authentication or profile data. Could be client-server mismatch or offline mode conflicts."
+      },
+      {
+        name: "Pixelmon Optional Crash",
+        regex: /at com\.pixelmonmod\.pixelmon\.comm\.packetHandlers\.StarterListPacket/,
+        explanation: "Pixelmon failed to load player starter list, likely due to a corrupt save or login bug. Consider resetting player data or updating Pixelmon."
+      },
+      {
+        name: "ModelLoader Crash (Rendering Overlay)",
+        regex: /java\.lang\.NoSuchMethodError: net\.minecraft\.client\.renderer\.model\.ModelBakery/,
+        explanation: "Forge version mismatch detected. A mod is calling an outdated or missing model method — try updating Forge and mods."
+      },
+      {
+        name: "Block ID Limit Exceeded",
+        regex: /Invalid id \d+ - maximum id range exceeded/,
+        explanation: "Too many blocks registered — the block ID limit (usually 4095 in 1.12.2) has been exceeded. Remove unnecessary mods or split into multiple instances."
+      }
+    ];
 
     function analyzeCrash() {
       const crashText = document.getElementById("crashInput").value;
@@ -255,39 +278,68 @@
       const codeBox = document.getElementById("highlightedOutput");
       const code = document.getElementById("highlightedCode");
       const resetBtn = document.getElementById("analyzeAnother");
+      const filterInput = document.getElementById("filterInput");
 
       if (!crashText.trim()) {
         alert("Please paste a crash report first.");
         return;
       }
 
-      // Hide textarea and show code
       document.getElementById("crashInput").style.display = "none";
       codeBox.style.display = "block";
+      filterInput.style.display = "block";
       code.textContent = crashText;
       Prism.highlightElement(code);
       resetBtn.style.display = "inline-block";
 
-      // Diagnosis
-      const matches = [];
-      for (const pattern of patterns) {
-        if (pattern.regex.test(crashText)) {
-          matches.push(`<div class="pattern-match"><strong>${pattern.name}</strong><br>${pattern.explanation}</div>`);
-        }
-      }
+      const matches = detectPatterns(crashText);
 
-      output.innerHTML = `<h3>Analysis</h3>` + (
-        matches.length ? matches.join('') : `<p>No known crash patterns detected. Try reviewing manually or share with others for help.</p>`
+      const modloader = detectModLoader(crashText);
+      const loaderNote = modloader ? `<p><strong>Detected Mod Loader:</strong> ${modloader}</p>` : "";
+
+      output.innerHTML = `<h3>Analysis</h3>${loaderNote}` + (
+        matches.length ? `<div id='patternMatches'>${matches.join('')}</div>` :
+          `<p>No known crash patterns detected. <a href='https://github.com/CamoMano/MC-Tools/issues/new?template=unrecognized-crash.md' target='_blank'>Submit your crash log</a> to help us improve.</p>`
       );
+
+      output.scrollIntoView({ behavior: "smooth" });
+    }
+
+    function detectPatterns(text) {
+      return patterns
+        .filter(p => p.regex.test(text))
+        .map(p => `<div class="pattern-match"><strong>${p.name}</strong><br>${p.explanation}</div>`);
+    }
+
+    function detectModLoader(text) {
+      if (/fabricloader|net\.fabricmc/i.test(text)) return "Fabric";
+      if (/forge\.ModLoader|net\.minecraftforge/i.test(text)) return "Forge";
+      if (/quilt_loader|quiltmc/i.test(text)) return "Quilt";
+      if (/org\.bukkit|spigot|paper/i.test(text)) return "Spigot/Paper";
+      if (/spongepowered/i.test(text)) return "Sponge";
+      return null;
+    }
+
+    function filterAnalysis() {
+      const input = document.getElementById("filterInput").value.toLowerCase();
+      const matches = document.querySelectorAll("#patternMatches .pattern-match");
+      matches.forEach(m => {
+        m.style.display = m.textContent.toLowerCase().includes(input) ? "block" : "none";
+      });
     }
 
     function resetAnalyzer() {
       document.getElementById("crashInput").style.display = "block";
+      document.getElementById("crashInput").value = "";                // Clear textarea content
       document.getElementById("highlightedOutput").style.display = "none";
       document.getElementById("highlightedCode").textContent = "";
       document.getElementById("analysisOutput").innerHTML = `<h3>Analysis</h3><p>Paste a crash above and click Analyze.</p>`;
       document.getElementById("analyzeAnother").style.display = "none";
+      document.getElementById("filterInput").style.display = "none";
+      document.getElementById("filterInput").value = "";
     }
+
   </script>
 </body>
+
 </html>
