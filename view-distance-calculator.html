@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>View Distance Calculator - MC Tools</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+  <div id="navbar"></div>
+  <script src="js/loadNavbar.js"></script>
+
+  <main style="padding: 20px;">
+    <h1>View Distance Calculator</h1>
+    <p>Enter the view distance value to calculate how many chunks are loaded around the player.</p>
+
+    <label for="viewDistanceInput">View Distance:</label>
+    <input type="number" id="viewDistanceInput" min="2" max="32" value="10" />
+    <button onclick="calculateChunks()">Calculate</button>
+
+    <div id="chunkResults" style="margin-top: 20px;"></div>
+  </main>
+
+  <footer>
+    Made with <span>❤</span> for Minecraft Server Admins — <a href="#">GitHub</a>
+  </footer>
+
+  <script>
+    function calculateChunks() {
+      const viewDistance = parseInt(document.getElementById('viewDistanceInput').value);
+      if (isNaN(viewDistance) || viewDistance < 2 || viewDistance > 32) {
+        document.getElementById('chunkResults').innerHTML = `<p>Please enter a view distance between 2 and 32.</p>`;
+        return;
+      }
+
+      const diameter = (viewDistance * 2) + 1;
+      const totalChunks = diameter * diameter;
+
+      document.getElementById('chunkResults').innerHTML = `
+        <h3>Results</h3>
+        <ul>
+          <li><strong>View Distance:</strong> ${viewDistance}</li>
+          <li><strong>Chunks Loaded (Square Area):</strong> ${diameter} × ${diameter}</li>
+          <li><strong>Total Chunks:</strong> ${totalChunks}</li>
+        </ul>
+      `;
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MC Mod Scanner</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="favicon.ico" type="image/x-icon" />
+</head>
+<body>
+  <div id="navbar"></div>
+  <script src="js/loadNavbar.js"></script>
+
+  <main style="padding: 20px;">
+    <h1>MC Mod Scanner</h1>
+    <p>Upload the <strong>.zip</strong> file from any CurseForge modpack to narrow down what mods are client-sided:</p>
+    <input type="file" id="fileInput" accept=".zip">
+    <div id="results"></div>
+  </main>
+
+  <footer>
+    Made with <span>❤</span> for Minecraft Server Admins — <a href="#">GitHub</a>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script>
+    let config = {};
+
+    const categoryDescriptions = {
+      Known: "These mods are explicitly marked as client-sided.",
+      "High Probability": "These mods are highly likely to be client-sided.",
+      "Medium Probability": "These mods might be client-sided.",
+      "Low Probability": "These mods are less likely to be client-sided.",
+      Unknown: "These mods could not be categorized.",
+      Not: "These mods are explicitly marked as not client-sided."
+    };
+
+    const simplifyName = name => name.toLowerCase().replace(/[^a-z0-9]/g, "").trim();
+
+    const categorizeMods = mods => {
+      const categories = {
+        Known: [], "High Probability": [], "Medium Probability": [],
+        "Low Probability": [], Unknown: [], Not: []
+      };
+
+      mods.forEach(mod => {
+        const simplifiedName = simplifyName(mod.href);
+        let categorized = false;
+
+        if (config.Known.some(keyword => simplifiedName.includes(simplifyName(keyword)))) {
+          categories["Known"].push(mod); categorized = true;
+        }
+
+        if (!categorized && config.Not.some(keyword => simplifiedName.includes(simplifyName(keyword)))) {
+          categories["Not"].push(mod); categorized = true;
+        }
+
+        if (!categorized) {
+          for (const [category, keywords] of Object.entries(config)) {
+            if (category === "Known" || category === "Not") continue;
+            if (keywords.some(keyword => simplifiedName.includes(simplifyName(keyword)))) {
+              const displayCategory = category + " Probability";
+              categories[displayCategory].push(mod);
+              categorized = true;
+              break;
+            }
+          }
+        }
+
+        if (!categorized) categories["Unknown"].push(mod);
+      });
+
+      return categories;
+    };
+
+    const parseModlist = fileContent => {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(fileContent, "text/html");
+
+      return Array.from(doc.querySelectorAll("li a")).map(a => ({
+        href: a.getAttribute("href"),
+        prettyName: a.textContent.trim()
+      }));
+    };
+
+    const displayResults = categories => {
+      const resultsDiv = document.getElementById("results");
+      resultsDiv.innerHTML = "";
+
+      for (const [category, mods] of Object.entries(categories)) {
+        const categoryDiv = document.createElement("div");
+        categoryDiv.innerHTML = `
+          <h3>${category}</h3>
+          <p class="category-description">${categoryDescriptions[category]}</p>
+        `;
+
+        const ul = document.createElement("ul");
+
+        mods.forEach(mod => {
+          const li = document.createElement("li");
+          const a = document.createElement("a");
+          a.href = mod.href;
+          a.textContent = mod.prettyName;
+          a.target = "_blank";
+          a.rel = "noopener noreferrer";
+          li.appendChild(a);
+          ul.appendChild(li);
+        });
+
+        categoryDiv.appendChild(ul);
+        resultsDiv.appendChild(categoryDiv);
+      }
+    };
+
+    const loadConfig = async () => {
+      try {
+        const response = await fetch("config.json");
+        if (!response.ok) throw new Error(`Failed to load config: ${response.statusText}`);
+        config = await response.json();
+      } catch (error) {
+        console.error(error);
+        alert("Failed to load configuration file.");
+      }
+    };
+
+    const processZipFile = async file => {
+      const zip = new JSZip();
+      try {
+        const zipContent = await zip.loadAsync(file);
+        const modlistFile = Object.keys(zipContent.files).find(name => name.endsWith("modlist.html"));
+        if (!modlistFile) return alert("No modlist.html file found in the ZIP archive.");
+        const htmlContent = await zip.file(modlistFile).async("string");
+        const mods = parseModlist(htmlContent);
+        const categories = categorizeMods(mods);
+        displayResults(categories);
+      } catch (error) {
+        console.error("Error processing ZIP file:", error);
+        alert("Failed to process the ZIP file.");
+      }
+    };
+
+    document.getElementById("fileInput").addEventListener("change", e => {
+      const file = e.target.files[0];
+      if (file) processZipFile(file);
+    });
+
+    window.onload = loadConfig;
+  </script>
+</body>
+</html>

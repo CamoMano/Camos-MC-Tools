@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Server Properties Checker</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+  <div id="navbar"></div>
+  <script src="js/loadNavbar.js"></script>
+
+  <main style="padding: 20px;">
+    <h1>Server Properties Checker</h1>
+    <p>Paste your <code>server.properties</code> content or upload the file below.</p>
+
+    <textarea id="textInput" rows="12" placeholder="Paste your server.properties content here..."></textarea><br><br>
+    <input type="file" id="fileInput" accept=".txt,.properties"/><br><br>
+    <button onclick="analyzeProperties()">Analyze</button>
+    <button id="copyBtn" style="display:none;" onclick="copyOptimized()">Copy Optimized</button>
+    <button id="downloadBtn" style="display:none;" onclick="downloadOptimized()">Download Optimized</button>
+
+    <div id="results" style="margin-top:20px;"></div>
+  </main>
+
+  <footer>
+    Made with <span>❤</span> for Minecraft Server Admins — <a href="#">GitHub</a>
+  </footer>
+
+  <script>
+    document.getElementById('fileInput').addEventListener('change', function () {
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        document.getElementById('textInput').value = e.target.result;
+      };
+      reader.readAsText(this.files[0]);
+    });
+
+    let optimizedConfig = [];
+
+    function analyzeProperties() {
+      const content = document.getElementById('textInput').value.trim();
+      const resultsDiv = document.getElementById('results');
+
+      if (content === "") {
+        resultsDiv.innerHTML = `<p style="color: #ff4d4d;"><strong>Error:</strong> Please paste or upload your <code>server.properties</code> file.</p>`;
+        document.getElementById('copyBtn').style.display = 'none';
+        document.getElementById('downloadBtn').style.display = 'none';
+        return;
+      }
+
+      const lines = content.split('\n');
+      const config = {};
+      const warnings = [];
+      const notices = [];
+      optimizedConfig = [];
+
+      for (const line of lines) {
+        if (!line || line.startsWith('#')) continue;
+        const [key, ...rest] = line.split('=');
+        config[key.trim()] = rest.join('=').trim();
+      }
+
+      if (parseInt(config['view-distance']) > 10) {
+        warnings.push('view-distance > 10 (Recommended: 10)');
+        optimizedConfig.push('view-distance=10');
+      }
+
+      if (parseInt(config['simulation-distance']) > 10) {
+        warnings.push('simulation-distance > 10 (Recommended: 10)');
+        optimizedConfig.push('simulation-distance=10');
+      }
+
+      const nct = parseInt(config['network-compression-threshold']);
+      if (nct === -1 || nct > 256) {
+        warnings.push('network-compression-threshold > 256 or = -1 (Recommended: 256)');
+        optimizedConfig.push('network-compression-threshold=256');
+      }
+
+      if (config['sync-chunk-writes'] === 'true') {
+        warnings.push('sync-chunk-writes is true (Recommended: false)');
+        optimizedConfig.push('sync-chunk-writes=false');
+      }
+
+      const mtt = parseInt(config['max-tick-time']);
+      if (mtt > 0 && mtt < 60000) {
+        warnings.push('max-tick-time < 60000 (Recommended: -1 or >= 60000)');
+        optimizedConfig.push('max-tick-time=60000');
+      }
+
+      if (config['online-mode'] === 'false') {
+        notices.push('online-mode is false — This makes the server insecure.');
+      }
+
+      if (config['white-list'] === 'false') {
+        notices.push('white-list is false — Should be true unless your server is public.');
+      }
+
+      if (parseInt(config['spawn-protection']) > 0) {
+        notices.push('spawn-protection > 0 — Set to 0 if not required.');
+      }
+
+      let output = '';
+
+      if (warnings.length > 0) {
+        output += '<h3>Warnings</h3><ul>' + warnings.map(w => `<li>${w}</li>`).join('') + '</ul>';
+      }
+
+      if (notices.length > 0) {
+        output += '<h3>Notices</h3><ul>' + notices.map(n => `<li>${n}</li>`).join('') + '</ul>';
+      }
+
+      if (optimizedConfig.length > 0) {
+        output += '<h3>Suggested Optimizations</h3><ul>' + optimizedConfig.map(o => `<li>${o}</li>`).join('') + '</ul>';
+        document.getElementById('copyBtn').style.display = 'inline-block';
+        document.getElementById('downloadBtn').style.display = 'inline-block';
+      } else {
+        document.getElementById('copyBtn').style.display = 'none';
+        document.getElementById('downloadBtn').style.display = 'none';
+      }
+
+      if (!output) {
+        output = '<p>No issues detected. Your server.properties file looks good!</p>';
+      }
+
+      resultsDiv.innerHTML = output;
+    }
+
+    function copyOptimized() {
+      const text = optimizedConfig.join('\n');
+      navigator.clipboard.writeText(text).then(() => {
+        alert('Optimized config copied to clipboard!');
+      });
+    }
+
+    function downloadOptimized() {
+      const blob = new Blob([optimizedConfig.join('\n')], { type: 'text/plain' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'server.properties';
+      link.click();
+    }
+  </script>
+</body>
+</html>
