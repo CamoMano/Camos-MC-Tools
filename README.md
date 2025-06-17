@@ -1,4 +1,4 @@
-# Camos MC Tools
+# MC Tools
 
 A collection of web-based utilities designed to help Minecraft server administrators manage and optimize their servers.
 

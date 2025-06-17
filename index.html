@@ -4,20 +4,34 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>MC Tools - Home</title>
+  <base href="./">
   <link rel="stylesheet" href="style.css"/>
+  <script src="js/loadNavbar.js" defer></script>
 </head>
 <body>
   <div id="navbar"></div>
-  <script src="js/loadNavbar.js"></script>
 
-  <main style="padding: 20px;">
-    <h1>Welcome to MC Tools</h1>
-    <p>Helpful utilities for Minecraft server administrators.</p>
+  <main class="homepage">
+    <section class="hero">
+      <h1>Welcome to <span class="highlight">MC Tools</span></h1>
+      <p class="subtitle">Helpful utilities for Minecraft server administrators.</p>
+    </section>
 
-    <ul>
-      <li><a href="server-properties-checker.html">Server Properties Checker</a> — Analyze and optimize your <code>server.properties</code> file.</li>
-      <!-- Add more tools here in future -->
-    </ul>
+    <section class="tools-list">
+      <h2>Available Tools</h2>
+      <div class="tool-card">
+        <h3><a href="server-properties-checker.html">Server Properties Checker</a></h3>
+        <p>Analyze and optimize your <code>server.properties</code> file.</p>
+      </div>
+      <div class="tool-card">
+        <h3><a href="view-distance-calculator.html">View Distance Calculator</a></h3>
+        <p>Calculate the optimal view distance for your server setup.</p>
+      </div>
+      <div class="tool-card">
+        <h3><a href="mod-scanner.html">Mod Scanner</a></h3>
+        <p>Scan your modpack for client-side-only mods.</p>
+      </div>
+    </section>
   </main>
 
   <footer>
